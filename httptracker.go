@@ -3,6 +3,7 @@
 package httputil
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +23,28 @@ type trackedEvent struct {
 	callers []uintptr
 }
 
+func (t trackedEvent) MarshalJSON() ([]byte, error) {
+	frames := []string{}
+	for _, pc := range t.callers {
+		frame := runtime.FuncForPC(pc)
+		fn, line := frame.FileLine(frame.Entry())
+		frames = append(frames, fmt.Sprintf("%v() - %v:%v",
+			frame.Name(), fn, line))
+	}
+	now := time.Now()
+	ob := map[string]interface{}{
+		"startTime":  t.t,
+		"duration":   now.Sub(t.t),
+		"duration_s": now.Sub(t.t).String(),
+		"method":     t.req.Method,
+		"url":        t.req.URL.String(),
+	}
+	if len(frames) > 0 {
+		ob["stack"] = frames
+	}
+	return json.Marshal(ob)
+}
+
 // HTTPTracker is a http.RoundTripper wrapper that tracks usage of clients.
 type HTTPTracker struct {
 	// Next is the RoundTripper being wrapped
@@ -32,6 +55,31 @@ type HTTPTracker struct {
 	mu       sync.Mutex
 	inflight map[int]trackedEvent
 	nextID   int
+}
+
+// MarshalJSON provides a JSON representation of the state of tracker.
+func (t *HTTPTracker) MarshalJSON() ([]byte, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	events := make([]trackedEvent, 0, len(t.inflight))
+	for _, e := range t.inflight {
+		events = append(events, e)
+	}
+	return json.Marshal(events)
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+// String produces a JSON formatted representation of the tracker
+// state.  This is directly useful to expvar.
+func (t *HTTPTracker) String() string {
+	b, err := t.MarshalJSON()
+	must(err)
+	return string(b)
 }
 
 func (t *HTTPTracker) register(req *http.Request) int {
@@ -124,15 +172,18 @@ func (t *HTTPTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 //
 // If trackStacks is true, the call stack will be included with
 // tracking information and reports.
-func InitHTTPTracker(trackStacks bool) {
-	http.DefaultTransport = &HTTPTracker{
+func InitHTTPTracker(trackStacks bool) *HTTPTracker {
+	tracker := &HTTPTracker{
 		Next:        http.DefaultTransport,
 		TrackStacks: trackStacks,
 		inflight:    map[int]trackedEvent{},
 	}
 
+	http.DefaultTransport = tracker
+
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, sigInfo)
 
-	go http.DefaultTransport.(*HTTPTracker).ReportLoop(os.Stdout, sigch)
+	go tracker.ReportLoop(os.Stdout, sigch)
+	return tracker
 }
