@@ -1,24 +1,5 @@
 // Package httputil provides a small junk drawer of http client and
 // server helpers.
-//
-// The easiest way to use http tracker for a commandline tool is to
-// just call InitHTTPTracker:
-//
-//    httputil.InitHTTPTracker(false)
-//
-// This wraps the current http.DefaultTransport with a tracking
-// transport and installs a SIGINFO handler to report the current
-// state on demand.
-//
-// If you have a web server that is also an HTTP client and uses
-// expvar, you can publish an expvar version of the data with the
-// following, similar invocation:
-//
-//   expvar.Publish("httpclients", httputil.InitHTTPTracker(false))
-//
-// The boolean parameter in the above examples determines whether
-// stacks are also tracked.  See the docs for InitHTTPTracker for more
-// details.
 package httputil
 
 import (
@@ -65,6 +46,25 @@ func (t trackedEvent) MarshalJSON() ([]byte, error) {
 }
 
 // HTTPTracker is a http.RoundTripper wrapper that tracks usage of clients.
+//
+// The easiest way to use http tracker for a commandline tool is to
+// just call InitHTTPTracker:
+//
+//    httputil.InitHTTPTracker(false)
+//
+// This wraps the current http.DefaultTransport with a tracking
+// transport and installs a SIGINFO handler to report the current
+// state on demand.
+//
+// If you have a web server that is also an HTTP client and uses
+// expvar, you can publish an expvar version of the data with the
+// following, similar invocation:
+//
+//   expvar.Publish("httpclients", httputil.InitHTTPTracker(false))
+//
+// The boolean parameter in the above examples determines whether
+// stacks are also tracked.  See the docs for InitHTTPTracker for more
+// details.
 type HTTPTracker struct {
 	// Next is the RoundTripper being wrapped
 	Next http.RoundTripper
