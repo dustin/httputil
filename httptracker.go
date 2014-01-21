@@ -85,6 +85,9 @@ func (t *HTTPTracker) String() string {
 func (t *HTTPTracker) register(req *http.Request) int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.inflight == nil {
+		t.inflight = map[int]trackedEvent{}
+	}
 	_, exists := t.inflight[t.nextID]
 	for exists {
 		t.nextID++
@@ -176,7 +179,6 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 	tracker := &HTTPTracker{
 		Next:        http.DefaultTransport,
 		TrackStacks: trackStacks,
-		inflight:    map[int]trackedEvent{},
 	}
 
 	http.DefaultTransport = tracker
