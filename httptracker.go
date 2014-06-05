@@ -74,6 +74,7 @@ type HTTPTracker struct {
 	mu       sync.Mutex
 	inflight map[int]trackedEvent
 	nextID   int
+	sigch    chan os.Signal
 }
 
 // MarshalJSON provides a JSON representation of the state of tracker.
@@ -198,13 +199,13 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 	tracker := &HTTPTracker{
 		Next:        http.DefaultTransport,
 		TrackStacks: trackStacks,
+		sigch:       make(chan os.Signal, 1),
 	}
 
 	http.DefaultTransport = tracker
 
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, sigInfo)
+	signal.Notify(tracker.sigch, sigInfo)
 
-	go tracker.ReportLoop(os.Stdout, sigch)
+	go tracker.ReportLoop(os.Stdout, tracker.sigch)
 	return tracker
 }
