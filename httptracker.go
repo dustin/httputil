@@ -190,6 +190,13 @@ func (t *HTTPTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
+// Shut down this tracker.
+func (h *HTTPTracker) Close() error {
+	signal.Stop(h.sigch)
+	close(h.sigch)
+	return nil
+}
+
 // InitHTTPTracker wraps http.DefaultTransport with a tracking
 // DefaultTransport and installs a SIGINFO handler to report progress.
 //

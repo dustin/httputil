@@ -8,6 +8,7 @@ import (
 func TestTrackerInit(t *testing.T) {
 	defer func(prev http.RoundTripper) { http.DefaultTransport = prev }(http.DefaultTransport)
 	x := InitHTTPTracker(false)
+	defer x.Close()
 	if http.DefaultTransport != x {
 		t.Errorf("Expected transport to be installed. Was %v", http.DefaultTransport)
 	}
@@ -19,6 +20,7 @@ func TestTrackerInit(t *testing.T) {
 func TestTrackerInitNoTrack(t *testing.T) {
 	defer func(prev http.RoundTripper) { http.DefaultTransport = prev }(http.DefaultTransport)
 	x := InitHTTPTracker(true)
+	defer x.Close()
 	if http.DefaultTransport != x {
 		t.Errorf("Expected transport to be installed. Was %v", http.DefaultTransport)
 	}
