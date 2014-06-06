@@ -190,7 +190,7 @@ func (t *HTTPTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-// Shut down this tracker.
+// Close shuts down this tracker.
 func (h *HTTPTracker) Close() error {
 	signal.Stop(h.sigch)
 	close(h.sigch)
