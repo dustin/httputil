@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 )
@@ -26,5 +27,17 @@ func TestTrackerInitNoTrack(t *testing.T) {
 	}
 	if !x.TrackStacks {
 		t.Errorf("Expected to not track stacks. Will")
+	}
+}
+
+func TestMust(t *testing.T) {
+	must(nil) // be nice to not panic here
+	panicked := false
+	func() {
+		defer func() { _, panicked = recover().(error) }()
+		must(errors.New("break here"))
+	}()
+	if !panicked {
+		t.Fatalf("Expected a panic, but didn't get one.")
 	}
 }
