@@ -41,3 +41,14 @@ func TestMust(t *testing.T) {
 		t.Fatalf("Expected a panic, but didn't get one.")
 	}
 }
+
+func TestTrackerStringing(t *testing.T) {
+	defer func(prev http.RoundTripper) { http.DefaultTransport = prev }(http.DefaultTransport)
+	x := InitHTTPTracker(false)
+	defer x.Close()
+
+	got := x.String()
+	if got != "[]" {
+		t.Fatalf(`Expected "[]", got %q`, got)
+	}
+}
