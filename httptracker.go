@@ -17,8 +17,14 @@ import (
 
 const sigInfo = syscall.Signal(29)
 
+type timeSrc struct {
+	now   func() time.Time
+	since func(time.Time) time.Duration
+}
+
 type trackedEvent struct {
 	t       time.Time
+	tsrc    timeSrc
 	req     *http.Request
 	callers []uintptr
 }
@@ -31,7 +37,7 @@ func (t trackedEvent) MarshalJSON() ([]byte, error) {
 		frames = append(frames, fmt.Sprintf("%v() - %v:%v",
 			frame.Name(), fn, line))
 	}
-	now := time.Now()
+	now := t.tsrc.now()
 	ob := map[string]interface{}{
 		"startTime":  t.t,
 		"duration":   now.Sub(t.t),
@@ -71,6 +77,7 @@ type HTTPTracker struct {
 	// TrackStacks will record user stacks if true.
 	TrackStacks bool
 
+	tsrc     timeSrc
 	mu       sync.Mutex
 	inflight map[int]trackedEvent
 	nextID   int
@@ -122,7 +129,7 @@ func (t *HTTPTracker) register(req *http.Request) int {
 		n := runtime.Callers(3, pcs)
 		pcs = pcs[:n-1]
 	}
-	t.inflight[thisID] = trackedEvent{time.Now(), req, pcs}
+	t.inflight[thisID] = trackedEvent{t.tsrc.now(), t.tsrc, req, pcs}
 	return thisID
 }
 
@@ -140,7 +147,7 @@ func (t *HTTPTracker) Report(w io.Writer) {
 
 	fmt.Fprintf(w, "In-flight HTTP requests:\n")
 	for _, e := range t.inflight {
-		fmt.Fprintf(w, "  servicing %v %q for %v\n", e.req.Method, e.req.URL, time.Since(e.t))
+		fmt.Fprintf(w, "  servicing %v %q for %v\n", e.req.Method, e.req.URL, t.tsrc.since(e.t))
 		for _, caller := range e.callers {
 			frame := runtime.FuncForPC(caller)
 			fn, line := frame.FileLine(frame.Entry())
@@ -207,6 +214,7 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 		Next:        http.DefaultTransport,
 		TrackStacks: trackStacks,
 		sigch:       make(chan os.Signal, 1),
+		tsrc:        timeSrc{time.Now, time.Since},
 	}
 
 	http.DefaultTransport = tracker
