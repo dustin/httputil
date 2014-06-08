@@ -1,9 +1,12 @@
 package httputil
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"testing"
+	"time"
 )
 
 func TestTrackerInit(t *testing.T) {
@@ -50,5 +53,29 @@ func TestTrackerStringing(t *testing.T) {
 	got := x.String()
 	if got != "[]" {
 		t.Fatalf(`Expected "[]", got %q`, got)
+	}
+}
+
+func TestEventMarshaling(t *testing.T) {
+	u, err := url.Parse("http://www.spy.net/")
+	must(err)
+	start, err := time.Parse(time.RFC3339, "2014-06-10T09:24:00Z")
+	must(err)
+	end := start.Add(19 * time.Millisecond).UTC()
+	ev := &trackedEvent{
+		start,
+		timeSrc{
+			now: func() time.Time { return end },
+		},
+		&http.Request{Method: "GET", URL: u},
+		nil,
+	}
+
+	j, err := json.Marshal(ev)
+	must(err)
+
+	exp := `{"duration":19000000,"duration_s":"19ms","method":"GET","startTime":"2014-06-10T09:24:00Z","url":"http://www.spy.net/"}`
+	if string(j) != exp {
+		t.Errorf("Expected %q, got %q", exp, j)
 	}
 }
