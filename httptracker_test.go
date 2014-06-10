@@ -79,3 +79,31 @@ func TestEventMarshaling(t *testing.T) {
 		t.Errorf("Expected %q, got %q", exp, j)
 	}
 }
+
+func TestRegistration(t *testing.T) {
+	defer func(prev http.RoundTripper) { http.DefaultTransport = prev }(http.DefaultTransport)
+	x := InitHTTPTracker(true)
+	defer x.Close()
+
+	u, err := url.Parse("http://www.spy.net/")
+	must(err)
+	one := x.register(&http.Request{Method: "GET", URL: u})
+	two := x.register(&http.Request{Method: "GET", URL: u})
+
+	if n := x.count(); n != 2 {
+		t.Errorf("Expected two tracked items, got %v", n)
+	}
+	x.unregister(one)
+	if n := x.count(); n != 1 {
+		t.Errorf("Expected one tracked items, got %v", n)
+	}
+	x.unregister(one)
+	if n := x.count(); n != 1 {
+		t.Errorf("Expected one tracked items, got %v", n)
+	}
+	x.unregister(two)
+	if n := x.count(); n != 0 {
+		t.Errorf("Expected zero tracked items, got %v", n)
+	}
+
+}

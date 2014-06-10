@@ -109,6 +109,12 @@ func (t *HTTPTracker) String() string {
 	return string(b)
 }
 
+func (t *HTTPTracker) count() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.inflight)
+}
+
 func (t *HTTPTracker) register(req *http.Request) int {
 	t.mu.Lock()
 	defer t.mu.Unlock()
