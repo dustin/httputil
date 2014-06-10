@@ -107,3 +107,23 @@ func TestRegistration(t *testing.T) {
 	}
 
 }
+
+func TestRegistrationIDCollision(t *testing.T) {
+	defer func(prev http.RoundTripper) { http.DefaultTransport = prev }(http.DefaultTransport)
+	x := InitHTTPTracker(true)
+	defer x.Close()
+
+	x.inflight = map[int]trackedEvent{}
+	x.inflight[0] = trackedEvent{}
+	x.inflight[1] = trackedEvent{}
+	x.inflight[2] = trackedEvent{}
+	x.inflight[3] = trackedEvent{}
+
+	u, err := url.Parse("http://www.spy.net/")
+	must(err)
+	id := x.register(&http.Request{Method: "GET", URL: u})
+
+	if id != 4 {
+		t.Errorf("Expected ID 4, got %v", id)
+	}
+}
