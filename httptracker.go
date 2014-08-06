@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/signal"
 	"runtime"
 	"sync"
 	"time"
@@ -202,7 +201,7 @@ func (t *HTTPTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // Close shuts down this tracker.
 func (t *HTTPTracker) Close() error {
-	signal.Stop(t.sigch)
+	stopTracker(t.sigch)
 	close(t.sigch)
 	return nil
 }
