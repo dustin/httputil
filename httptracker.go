@@ -11,11 +11,8 @@ import (
 	"os/signal"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 )
-
-const sigInfo = syscall.Signal(29)
 
 type timeSrc struct {
 	now   func() time.Time
@@ -224,8 +221,6 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 	}
 
 	http.DefaultTransport = tracker
-
-	signal.Notify(tracker.sigch, sigInfo)
 
 	go tracker.ReportLoop(os.Stdout, tracker.sigch)
 	return tracker
