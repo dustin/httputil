@@ -15,5 +15,5 @@ func stopTracker(ch chan os.Signal) {
 }
 
 func initTracker(ch chan os.Signal) {
-	signal.Notify(tracker.sigch, sigInfo)
+	signal.Notify(ch, sigInfo)
 }
