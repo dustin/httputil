@@ -24,6 +24,15 @@ func (e httpError) Error() string {
 	return fmt.Sprintf(r.Replace(e.format), e.args...)
 }
 
+// IsHTTPStatus returns true if the given error is caused by an HTTP
+// response with the given HTTP status.
+func IsHTTPStatus(err error, status int) bool {
+	if he, ok := err.(httpError); ok {
+		return he.code == status
+	}
+	return false
+}
+
 // HTTPError converts an http response into an error.
 //
 // Note that this reads the body, so only use it when the response
