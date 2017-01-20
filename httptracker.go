@@ -229,6 +229,7 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 
 	http.DefaultTransport = tracker
 
+	initTracker(tracker.sigch)
 	go tracker.ReportLoop(os.Stdout, tracker.sigch)
 	return tracker
 }
