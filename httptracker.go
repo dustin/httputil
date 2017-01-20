@@ -187,6 +187,14 @@ func (d *trackFinalizer) WriteTo(w io.Writer) (n int64, err error) {
 	return io.Copy(w, d.b)
 }
 
+func (t *HTTPTracker) CancelRequest(req *http.Request) {
+	if c, ok := t.Next.(interface {
+		CancelRequest(*http.Request)
+	}); ok {
+		c.CancelRequest(req)
+	}
+}
+
 // RoundTrip satisfies http.RoundTripper
 func (t *HTTPTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 	id := t.register(req)
