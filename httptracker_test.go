@@ -64,6 +64,7 @@ func TestEventMarshaling(t *testing.T) {
 	end := start.Add(19 * time.Millisecond).UTC()
 	ev := &trackedEvent{
 		start,
+		time.Time{},
 		timeSrc{
 			now: func() time.Time { return end },
 		},
@@ -75,6 +76,32 @@ func TestEventMarshaling(t *testing.T) {
 	must(err)
 
 	exp := `{"duration":19000000,"duration_s":"19ms","method":"GET","startTime":"2014-06-10T09:24:00Z","url":"http://www.spy.net/"}`
+	if string(j) != exp {
+		t.Errorf("Expected %q, got %q", exp, j)
+	}
+}
+
+func TestEventMarshalingWithTimeout(t *testing.T) {
+	u, err := url.Parse("http://www.spy.net/")
+	must(err)
+	start, err := time.Parse(time.RFC3339, "2014-06-10T09:24:00Z")
+	must(err)
+	end := start.Add(19 * time.Millisecond).UTC()
+	deadline := start.Add(time.Second * 5)
+	ev := &trackedEvent{
+		start,
+		deadline,
+		timeSrc{
+			now: func() time.Time { return end },
+		},
+		&http.Request{Method: "GET", URL: u},
+		nil,
+	}
+
+	j, err := json.Marshal(ev)
+	must(err)
+
+	exp := `{"duration":19000000,"duration_s":"19ms","method":"GET","startTime":"2014-06-10T09:24:00Z","timeout":4981000000,"timeout_s":"4.981s","url":"http://www.spy.net/"}`
 	if string(j) != exp {
 		t.Errorf("Expected %q, got %q", exp, j)
 	}

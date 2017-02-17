@@ -19,10 +19,10 @@ type timeSrc struct {
 }
 
 type trackedEvent struct {
-	t       time.Time
-	tsrc    timeSrc
-	req     *http.Request
-	callers []uintptr
+	t, deadline time.Time
+	tsrc        timeSrc
+	req         *http.Request
+	callers     []uintptr
 }
 
 func (t trackedEvent) MarshalJSON() ([]byte, error) {
@@ -40,6 +40,11 @@ func (t trackedEvent) MarshalJSON() ([]byte, error) {
 		"duration_s": now.Sub(t.t).String(),
 		"method":     t.req.Method,
 		"url":        t.req.URL.String(),
+	}
+	if !t.deadline.IsZero() {
+		dl := t.deadline.Sub(now)
+		ob["timeout"] = dl
+		ob["timeout_s"] = dl.String()
 	}
 	if len(frames) > 0 {
 		ob["stack"] = frames
@@ -131,7 +136,8 @@ func (t *HTTPTracker) register(req *http.Request) int {
 		n := runtime.Callers(3, pcs)
 		pcs = pcs[:n-1]
 	}
-	t.inflight[thisID] = trackedEvent{t.tsrc.now(), t.tsrc, req, pcs}
+	deadline, _ := req.Context().Deadline()
+	t.inflight[thisID] = trackedEvent{t.tsrc.now(), deadline, t.tsrc, req, pcs}
 	return thisID
 }
 
@@ -149,7 +155,12 @@ func (t *HTTPTracker) Report(w io.Writer) {
 
 	fmt.Fprintf(w, "In-flight HTTP requests:\n")
 	for _, e := range t.inflight {
-		fmt.Fprintf(w, "  servicing %v %q for %v\n", e.req.Method, e.req.URL, t.tsrc.since(e.t))
+		remaining := ""
+		if !e.deadline.IsZero() {
+			remaining = fmt.Sprintf(" - timeout in %v", e.deadline.Sub(time.Now()))
+		}
+
+		fmt.Fprintf(w, "  servicing %v %q for %v%s\n", e.req.Method, e.req.URL, t.tsrc.since(e.t), remaining)
 		for _, caller := range e.callers {
 			frame := runtime.FuncForPC(caller)
 			fn, line := frame.FileLine(frame.Entry())
