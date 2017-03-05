@@ -136,8 +136,7 @@ func (t *HTTPTracker) register(req *http.Request) int {
 		n := runtime.Callers(3, pcs)
 		pcs = pcs[:n-1]
 	}
-	deadline, _ := req.Context().Deadline()
-	t.inflight[thisID] = trackedEvent{t.tsrc.now(), deadline, t.tsrc, req, pcs}
+	t.inflight[thisID] = trackedEvent{t.tsrc.now(), reqDeadline(req), t.tsrc, req, pcs}
 	return thisID
 }
 
