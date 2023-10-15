@@ -243,3 +243,21 @@ func InitHTTPTracker(trackStacks bool) *HTTPTracker {
 	go tracker.ReportLoop(os.Stdout, tracker.sigch)
 	return tracker
 }
+
+// InitHTTPTracker wraps http.DefaultTransport with a tracking
+// DefaultTransport and does not install a SIGINFO wrapper.
+//
+// If trackStacks is true, the call stack will be included with
+// tracking information and reports.
+func InitHTTPTrackerOnly(trackStacks bool) *HTTPTracker {
+	tracker := &HTTPTracker{
+		Next:        http.DefaultTransport,
+		TrackStacks: trackStacks,
+		sigch:       make(chan os.Signal, 1),
+		tsrc:        timeSrc{time.Now, time.Since},
+	}
+
+	http.DefaultTransport = tracker
+
+	return tracker
+}
